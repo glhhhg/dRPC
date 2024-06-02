@@ -122,6 +122,7 @@ func isExportedOrBuiltinType(argType reflect.Type) bool {
 // call 通过解析后的反射值调用方法
 func (s *service) call(m *methodType, argv, reply reflect.Value) error {
 	atomic.AddUint64(&m.numCalls, 1)
+	log.Printf("rpc server: invoke method %s(args %s, reply %s)\n", m.method.Name, argv, reply)
 	f := m.method.Func
 	returnValue := f.Call([]reflect.Value{s.rcvr, argv, reply})
 	if err := returnValue[0].Interface(); err != nil {

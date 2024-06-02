@@ -213,6 +213,7 @@ func dialTimeout(network, address string, opts ...*option.Option) (*Client, erro
 
 // Dial 用户传入服务端地址，创建Client实例并处理服务端返回的数据
 func Dial(network, address string, opts ...*option.Option) (client *Client, err error) {
+	log.Println("rpc client: dial with:", network, address)
 	return dialTimeout(network, address, opts...)
 }
 
@@ -266,6 +267,7 @@ func (client *Client) Go(serviceMethod string, args, reply interface{}, done cha
 // Call 和 Go 是客户端暴露给用户的两个RPC服务调用接口，Go是一个异步接口，返回call实例。
 // Call 是对 Go 的封装，阻塞call.Done，等待响应返回，是一个同步接口。
 func (client *Client) Call(serviceMethod string, args, reply interface{}) error {
+	log.Printf("rpc client: call method %s(args %s, reply %s)", serviceMethod, args, reply)
 	call := client.Go(serviceMethod, args, reply, make(chan *Call, 1))
 	select {
 	case call := <-call.Done:

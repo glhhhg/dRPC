@@ -58,6 +58,7 @@ func (server *Server) findService(serviceMethod string) (s *service, mtype *meth
 
 // Accept for循环等待tcp socket连接建立，与客户端建立起链接，并开启子协程处理
 func (server *Server) Accept(lis net.Listener) {
+	log.Println("rpc server accept listening on", lis.Addr().Network(), lis.Addr())
 	for {
 		conn, err := lis.Accept()
 		if err != nil {
@@ -152,6 +153,7 @@ func (server *Server) readRequest(f serialize.Coder) (*request, error) {
 	}
 
 	req := &request{h: h}
+	log.Println("rpc server: read request header: client request:", h.ServiceMethod)
 	req.svc, req.mtype, err = server.findService(h.ServiceMethod)
 	if err != nil {
 		return req, err
@@ -175,6 +177,7 @@ func (server *Server) sendResponse(f serialize.Coder, h *serialize.Header, body 
 	sending *sync.Mutex) {
 	sending.Lock()
 	defer sending.Unlock()
+	log.Printf("rpc server: sending response: %s\n", body)
 	if err := f.Write(h, body); err != nil {
 		log.Println("rpc server: write response error: ", err)
 	}
