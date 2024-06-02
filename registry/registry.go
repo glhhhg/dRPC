@@ -18,14 +18,14 @@ type ServerItem struct {
 // Registry 是一个简单的注册中心，提供以下功能：
 // 添加服务, 接收心跳,返回可用服务,删除不可用服务
 type Registry struct {
-	timeout time.Duration
+	timeout time.Duration // 超时时间默认为5min，超过就认为服务不可用
 	mu      sync.Mutex
 	servers map[string]*ServerItem
 }
 
 const (
-	defaultPath    = "/dRPC/registry"
-	defaultTimeout = time.Minute * 5 // 超时时间默认为5min，超过就认为服务不可用
+	defaultPath    = "/rpc-test/registry"
+	defaultTimeout = time.Minute * 5
 )
 
 // NewRegistry 设置有效期限，创建一个Registry实例
@@ -36,11 +36,10 @@ func NewRegistry(timeout time.Duration) *Registry {
 	}
 }
 
-// DefaultRegistry 根据默认时间创建默认的注册中心
 var DefaultRegistry = NewRegistry(defaultTimeout)
 
-// setServer 添加服务实例，如果服务已存在则更新start
-func (r *Registry) setServer(addr string) {
+// putServer 添加服务实例，如果服务已存在则更新start
+func (r *Registry) putServer(addr string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	s := r.servers[addr]
@@ -51,8 +50,8 @@ func (r *Registry) setServer(addr string) {
 	}
 }
 
-// getAliveServer 返回可用的服务列表，如果存在超时的服务则删除
-func (r *Registry) getAliveServer() []string {
+// aliveServers 返回可用的服务列表，如果存在超时的服务则删除
+func (r *Registry) aliveServer() []string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	var alive []string
@@ -67,36 +66,33 @@ func (r *Registry) getAliveServer() []string {
 	return alive
 }
 
-func (r *Registry) serverHTTP(w http.ResponseWriter, req *http.Request) {
+// ServerHTTP Registry采用 HTTP 协议提供服务，且所有的有用信息都承载在 HTTP Header 中
+// GET：返回所有可用的服务列表，通过自定义字段 X-rpc-Servers 承载。
+// POST：添加服务实例或发送心跳，通过自定义字段 X-rpc-Server 承载。
+func (r *Registry) ServerHTTP(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "GET":
-		w.Header().Set("Registry", strings.Join(r.getAliveServer(), ","))
+		w.Header().Set("X-rpc-Server", strings.Join(r.aliveServer(), ","))
 	case "POST":
-		addr := req.Header.Get("Registry")
+		addr := req.Header.Get("X-rpc-Server")
 		// 提供的服务端地址url为空时
 		if addr == "" {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		r.setServer(addr)
+		r.putServer(addr)
 	// 除了GET和POST外其他的HTTP方法无效
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
+func (r *Registry) HandleHTTP(registryPath string) {
+	http.Handle(registryPath, http.HandlerFunc(r.ServerHTTP))
+	log.Println("rpc registry path: ", registryPath)
+}
 
-func (r *Registry) HandleHTTP(registryPath ...string) {
-	var path string
-	if len(registryPath) == 0 || registryPath[0] == "" {
-		path = defaultPath
-	} else if len(registryPath) == 1 {
-		path = registryPath[0]
-	} else {
-		log.Println("rpc registry error: invalid registry path:", registryPath)
-		return
-	}
-	http.Handle(path, http.HandlerFunc(r.serverHTTP))
-	log.Println("rpc registry path: ", path)
+func HandleHTTP() {
+	DefaultRegistry.HandleHTTP(defaultPath)
 }
 
 // Heartbeat 提供给服务端的封装，服务启动时定时向注册中心发送心跳
@@ -121,7 +117,7 @@ func sendHeartbeat(registry string, addr string) interface{} {
 	log.Println(addr, " send heartbeat to registry ", registry)
 	httpClient := &http.Client{}
 	req, _ := http.NewRequest("POST", registry, nil)
-	req.Header.Set("Registry", addr)
+	req.Header.Set("X-rpc-Server", addr)
 	if _, err := httpClient.Do(req); err != nil {
 		log.Println("rpc server: heartbeat error:", err)
 		return err

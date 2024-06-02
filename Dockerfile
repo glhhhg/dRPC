@@ -1,11 +1,11 @@
-FROM golang:latest
+FROM golang:latest AS builder
 
-WORKDIR /dRPC/server
+WORKDIR /dRPC/registry
 
 COPY . .
 
-RUN go build -o /server .
+RUN go build -o /registry .
 
 EXPOSE 12000
 
-ENTRYPOINT ["/server", "-i", "127.0.0.1", "-p", "12000"]
+ENTRYPOINT ["/registry", "-i", "0.0.0.0", "-p", "12000"]

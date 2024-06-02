@@ -4,6 +4,7 @@ import (
 	"dPRC/option"
 	"dPRC/registry"
 	"io"
+	"log"
 	"reflect"
 	"sync"
 )
@@ -46,30 +47,30 @@ func NewBClient(d registry.Discovery, mode registry.BalanceMode, opts ...*option
 
 // dial 检查xc.clients是否有缓存的Client，如果有，检查是否是可用状态，如果是则返回缓存的 Client;
 // 如果不可用，则从缓存中删除。如果没有返回缓存的Client，则说明需要创建新的Client，缓存并返回。
-func (xc *BClient) dial(rpcAddr string) (*Client, error) {
+func (xc *BClient) dial(serverAddr string) (*Client, error) {
 	xc.mu.Lock()
 	defer xc.mu.Unlock()
 
-	clt, ok := xc.clients[rpcAddr]
+	clt, ok := xc.clients[serverAddr]
 	if ok && !clt.IsAvailable() {
 		_ = clt.Close()
-		delete(xc.clients, rpcAddr)
+		delete(xc.clients, serverAddr)
 		clt = nil
 	}
 	if clt == nil {
 		var err error
-		clt, err = Dial("tcp", rpcAddr, xc.opt)
+		clt, err = Dial("tcp", serverAddr, xc.opt)
 		if err != nil {
 			return nil, err
 		}
-		xc.clients[rpcAddr] = clt
+		xc.clients[serverAddr] = clt
 	}
 	return clt, nil
 }
 
-func (xc *BClient) call(rpcAddr string, serviceMethod string,
+func (xc *BClient) call(serverAddr string, serviceMethod string,
 	args, reply interface{}) error {
-	clt, err := xc.dial(rpcAddr)
+	clt, err := xc.dial(serverAddr)
 	if err != nil {
 		return err
 	}
@@ -77,11 +78,12 @@ func (xc *BClient) call(rpcAddr string, serviceMethod string,
 }
 
 func (xc *BClient) Call(serviceMethod string, args, reply interface{}) error {
-	rpcAddr, err := xc.d.Get(xc.mode)
+	serverAddr, err := xc.d.Get(xc.mode)
+	log.Println("rpc bclient: call: get server address:", serverAddr)
 	if err != nil {
 		return err
 	}
-	return xc.call(rpcAddr, serviceMethod, args, reply)
+	return xc.call(serverAddr, serviceMethod, args, reply)
 }
 
 // Broadcast 将请求广播到注册中心所有的服务实例，如果任意一个实例发生错误，返回错误；
@@ -92,6 +94,7 @@ func (xc *BClient) Call(serviceMethod string, args, reply interface{}) error {
 func (xc *BClient) Broadcast(serviceMethod string,
 	args, reply interface{}) error {
 	servers, err := xc.d.GetAll()
+	log.Println("rpc bclient: broadcast: get all servers address:", servers)
 	if err != nil {
 		return err
 	}

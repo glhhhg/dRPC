@@ -113,11 +113,12 @@ func (client *Client) terminateCall(err error) {
 
 // receive 客户端处理服务端处理过后返回的请求
 func (client *Client) receive() {
-	var err error
+	var err error = nil
 	for err == nil {
 		var h serialize.Header
 		// 读取消息头出错，结束处理
 		if err = client.cc.ReadHeader(&h); err != nil {
+			log.Println("rpc client: receive header error:", err.Error())
 			break
 		}
 		call := client.removeCall(h.Seq)
@@ -132,6 +133,7 @@ func (client *Client) receive() {
 			call.done()
 		default:
 			err = client.cc.ReadBody(call.Reply)
+			log.Printf("rpc client: receive from server: header %v, body %s", h, call.Reply)
 			if err != nil {
 				call.Error = errors.New("reading body: " + err.Error())
 			}
