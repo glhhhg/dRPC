@@ -135,7 +135,7 @@ func (server *Server) readRequestHeader(c serialize.Coder) (*serialize.Header, e
 	var h serialize.Header
 	if err := c.ReadHeader(&h); err != nil {
 		if err != io.EOF && !errors.Is(err, io.ErrUnexpectedEOF) {
-			log.Println("rpc server: read header error: ", err)
+			log.Println("rpc server: read header: ", err)
 		}
 		return nil, err
 	}

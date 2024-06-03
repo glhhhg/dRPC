@@ -63,6 +63,7 @@ func (r *Registry) aliveServer() []string {
 		}
 	}
 	sort.Strings(alive)
+	log.Printf("rpc registry: aliveServer: %v", alive)
 	return alive
 }
 
@@ -75,6 +76,7 @@ func (r *Registry) ServerHTTP(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("X-rpc-Server", strings.Join(r.aliveServer(), ","))
 	case "POST":
 		addr := req.Header.Get("X-rpc-Server")
+		log.Println("rpc registry: receive heartbeat from ", addr)
 		// 提供的服务端地址url为空时
 		if addr == "" {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -88,7 +90,7 @@ func (r *Registry) ServerHTTP(w http.ResponseWriter, req *http.Request) {
 }
 func (r *Registry) HandleHTTP(registryPath string) {
 	http.Handle(registryPath, http.HandlerFunc(r.ServerHTTP))
-	log.Println("rpc registry path: ", registryPath)
+	log.Println("rpc registry: rpc registry handler path: ", registryPath)
 }
 
 func HandleHTTP() {
@@ -114,7 +116,7 @@ func Heartbeat(registry, addr string, duration time.Duration) {
 }
 
 func sendHeartbeat(registry string, addr string) interface{} {
-	log.Println(addr, " send heartbeat to registry ", registry)
+	log.Printf("server %s send heartbeat to registry %s\n", addr, registry)
 	httpClient := &http.Client{}
 	req, _ := http.NewRequest("POST", registry, nil)
 	req.Header.Set("X-rpc-Server", addr)
