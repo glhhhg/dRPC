@@ -1,0 +1,44 @@
+version: '3'
+services:
+  registry:
+    build:
+      context: .
+      dockerfile: Dockerfile.registry
+    container_name: registry
+    ports:
+      - "8080:8080"
+    networks:
+      - my_network
+
+  server1:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: server1
+    depends_on:
+      - registry
+    networks:
+      - my_network
+
+  server2:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: server2
+    depends_on:
+      - registry
+    networks:
+      - my_network
+
+  server3:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: server3
+    depends_on:
+      - registry
+    networks:
+      - my_network
+
+networks:
+  my_network:

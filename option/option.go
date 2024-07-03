@@ -3,7 +3,7 @@ package option
 import "time"
 
 // Option 字段定义dRPC协议中的一些重要指标
-// MagicNumber 用来区分不同客户端的请求序号
+// MagicNumber 用来标识这是一个dRPC请求
 // ConnectionTimeout 指定建立连接时的超时的时间限制
 // HandlerTimeout 指定处理服务调用时的超时的时间限制
 type Option struct {
