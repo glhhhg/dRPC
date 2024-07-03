@@ -2,43 +2,44 @@ package main
 
 import (
 	"dPRC/client"
+	"dPRC/main/methods"
 	"dPRC/registry"
+	"flag"
+	"fmt"
 	"log"
 )
 
+func displayHelp() {
+	fmt.Println("Usage dprc client:  -i IPADDRESS -p PORT")
+	fmt.Println("\t-i\tclient call registry's IPv4 or IPv6 address")
+	fmt.Println("\t-p\tclient call registry's port number")
+	fmt.Println("\t-h\thelp message")
+}
+
 func main() {
-	dis := registry.NewRegistryDiscovery("http://192.168.1.10:8080/registry", 0)
-	clt := client.NewBClient(dis, registry.RandomSelect)
-
-	var reply float64
-	if err := clt.Call("Circle.Area", Circle{5.0}, &reply); err != nil {
-		log.Fatal(err)
+	help := flag.Bool("h", false, "display help")
+	ip := flag.String("i", "", "client call registry ip address")
+	port := flag.Int("p", 0, "client call registry port")
+	flag.Parse()
+	if *help {
+		displayHelp()
+		return
 	}
-	log.Println("Call Circle.Area:", reply)
 
-	if err := clt.Call("Circle.GetRadius", Circle{15.0}, &reply); err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Call Circle.Radius:", reply)
+	address := fmt.Sprintf("http://%s:%d/", *ip, *port)
+	dis := registry.NewRegistryDiscovery(address, 0)
 
-	if err := clt.Call("Circle.Length", Circle{5.0}, &reply); err != nil {
-		log.Fatal(err)
+	var reply methods.Reply
+	var args = methods.Args{
+		A: 1, B: 2,
 	}
-	log.Println("Call Circle.Length:", reply)
+	for i := range 10 {
+		clt := client.NewBClient(dis, registry.RandomSelect)
+		if err := clt.Call("Function.Add", args, &reply); err != nil {
+			log.Println(err)
+			return
+		}
+		fmt.Printf("client%d: Function.Add reslut %d ", i, reply)
+	}
 
-	// -----------------------------------------------------------------------------------
-	if err := clt.Broadcast("Circle.Area", Circle{5.0}, &reply); err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Broadcast Circle.Area:", reply)
-
-	if err := clt.Broadcast("Circle.GetRadius", Circle{15.0}, &reply); err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Broadcast Circle.Radius:", reply)
-
-	if err := clt.Broadcast("Circle.Length", Circle{5.0}, &reply); err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Broadcast Circle.Length:", reply)
 }

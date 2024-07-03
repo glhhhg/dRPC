@@ -10,14 +10,14 @@ import (
 )
 
 func displayHelp() {
-	fmt.Println("Usage dprc registry:  -i IPADDRESS -p PORT")
-	fmt.Println("\t-i\tregistry IPv4 or IPv6 address")
-	fmt.Println("\t-p\tregistry port number")
+	fmt.Println("Usage dprc registry:  -l IPADDRESS -p PORT")
+	fmt.Println("\t-l\tregistry listen IPv4 or IPv6 address")
+	fmt.Println("\t-p\tregistry listen port number")
 	fmt.Println("\t-h\thelp message")
 }
 func main() {
 	help := flag.Bool("h", false, "display help")
-	ip := flag.String("i", "127.0.0.1", "ip address")
+	ip := flag.String("l", "0.0.0.0", "ip address")
 	port := flag.Int("p", 8080, "port")
 	flag.Parse()
 
@@ -33,6 +33,6 @@ func main() {
 		return
 	}
 	reg := registry.NewRegistry(0)
-	reg.HandleHTTP("/registry")
+	reg.HandleHTTP("/")
 	_ = http.Serve(lis, nil)
 }
