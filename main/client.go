@@ -39,7 +39,7 @@ func main() {
 			log.Println(err)
 			return
 		}
-		fmt.Printf("client%d: Function.Add reslut %d ", i, reply)
+		fmt.Printf("client%d: Function.Add reslut %d \n", i, reply)
 	}
 
 }
