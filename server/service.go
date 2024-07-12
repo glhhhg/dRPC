@@ -85,7 +85,7 @@ func newService(rcvr interface{}) *service {
 }
 
 // registerMethod 必须满足下面的两个条件：
-// 方法有两个参数，都是导出类型（或内置类型）。
+// 方法有两个参数，都是导出类型（或内置型）。
 // 方法返回错误类型。
 func (s *service) registerMethod() {
 	s.method = make(map[string]*methodType)

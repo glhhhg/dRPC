@@ -19,6 +19,8 @@ type JSONCoder struct {
 	encode *json.Encoder
 }
 
+var _ Coder = (*JSONCoder)(nil)
+
 func NewJSONCoder(conn io.ReadWriteCloser) Coder {
 	buffer := bufio.NewWriter(conn)
 	return &JSONCoder{
@@ -28,8 +30,6 @@ func NewJSONCoder(conn io.ReadWriteCloser) Coder {
 		encode: json.NewEncoder(buffer),
 	}
 }
-
-var _ Coder = (*JSONCoder)(nil)
 
 func (J JSONCoder) Close() error {
 	//TODO implement me

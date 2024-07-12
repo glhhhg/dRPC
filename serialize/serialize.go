@@ -23,10 +23,3 @@ type Coder interface {
 	ReadBody(interface{}) error
 	Write(*Header, interface{}) error
 }
-
-// Type 采用消息序列化的方法，dRPC使用JSON实现，但是也可以使用其他的方法
-type Type string
-
-const (
-	JSONType Type = "application/json"
-)
