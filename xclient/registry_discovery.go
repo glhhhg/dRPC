@@ -1,4 +1,8 @@
-package registry
+/*
+实现了简单的注册中心，同时复用负载均衡的客户端
+*/
+
+package xclient
 
 import (
 	"log"
@@ -7,10 +11,12 @@ import (
 	"time"
 )
 
-// RegistryDiscovery 继承了MultiServersDiscovery
-// registry 即注册中心的地址
-// timeout 服务列表的过期时间
-// lastUpdate 是代表最后从注册中心更新服务列表的时间，默认10s过期，即10s之后，需要从注册中心更新新的列表。
+/*
+RegistryDiscovery 嵌套了 MultiServersDiscovery，很多能力可以复用。
+registry 即注册中心的地址
+timeout 服务列表的过期时间
+lastUpdate 是代表最后从注册中心更新服务列表的时间，默认10s过期，即10s之后，需要从注册中心更新新的列表。
+*/
 type RegistryDiscovery struct {
 	*MultiServerDiscovery
 	registry   string
@@ -29,9 +35,9 @@ func NewRegistryDiscovery(registryAddr string, timeout time.Duration) *RegistryD
 		registry:             registryAddr,
 		timeout:              timeout,
 	}
-	log.Println("rpc registry discovery: discovery path: ", d.registry)
 	return d
 }
+
 func (r *RegistryDiscovery) Update(servers []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -49,26 +55,24 @@ func (r *RegistryDiscovery) Refresh() error {
 		return nil
 	}
 
-	log.Println("rpc registry discovery: refresh servers from registry: ", r.registry)
+	log.Println("rpc registry: refresh servers from registry: ", r.registry)
 	resp, err := http.Get(r.registry)
 	if err != nil {
-		log.Println("rpc registry discovery refresh error: ", err)
+		log.Println("rpc registry refresh error: ", err)
 		return err
 	}
 	servers := strings.Split(resp.Header.Get("X-rpc-Server"), ",")
-	log.Println("from http: ", servers)
 	r.servers = make([]string, 0, len(servers))
 	for _, server := range servers {
 		if strings.TrimSpace(server) != "" {
 			r.servers = append(r.servers, strings.TrimSpace(server))
-			log.Println("rpc registry discovery: refresh server: append server: ", server)
 		}
 	}
 	r.lastUpdate = time.Now()
 	return nil
 }
 
-func (r *RegistryDiscovery) Get(mode BalanceMode) (string, error) {
+func (r *RegistryDiscovery) Get(mode SelectMode) (string, error) {
 	if err := r.Refresh(); err != nil {
 		return "", err
 	}

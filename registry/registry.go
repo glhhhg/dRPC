@@ -1,3 +1,7 @@
+/*
+服务端和客户端对于注册中心的通信均采用的是HTTP协议。客户端GET服务列表，服务端POST服务实例和心跳
+*/
+
 package registry
 
 import (
@@ -9,14 +13,18 @@ import (
 	"time"
 )
 
-// ServerItem 存储注册中心中包含的所有服务器的地址和有效时间
 type ServerItem struct {
 	Addr  string
 	start time.Time
 }
 
-// Registry 是一个简单的注册中心，提供以下功能：
-// 添加服务, 接收心跳,返回可用服务,删除不可用服务
+/*
+Registry 是一个简单的注册中心，提供以下功能：
+1. 添加服务
+2. 接收心跳
+3. 返回可用服务
+4. 删除不可用服务
+*/
 type Registry struct {
 	timeout time.Duration // 超时时间默认为5min，超过就认为服务不可用
 	mu      sync.Mutex
@@ -28,7 +36,6 @@ const (
 	defaultTimeout = time.Minute * 5
 )
 
-// NewRegistry 设置有效期限，创建一个Registry实例
 func NewRegistry(timeout time.Duration) *Registry {
 	return &Registry{
 		timeout: timeout,
@@ -63,20 +70,20 @@ func (r *Registry) aliveServer() []string {
 		}
 	}
 	sort.Strings(alive)
-	log.Printf("rpc registry: aliveServer: %v", alive)
 	return alive
 }
 
-// ServerHTTP Registry采用 HTTP 协议提供服务，且所有的有用信息都承载在 HTTP Header 中
-// GET：返回所有可用的服务列表，通过自定义字段 X-rpc-Servers 承载。
-// POST：添加服务实例或发送心跳，通过自定义字段 X-rpc-Server 承载。
+/*
+ServerHTTP Registry采用 HTTP 协议提供服务，且所有的有用信息都承载在 HTTP Header 中
+Get：返回所有可用的服务列表，通过自定义字段 X-rpc-Servers 承载。
+Post：添加服务实例或发送心跳，通过自定义字段 X-rpc-Server 承载。
+*/
 func (r *Registry) ServerHTTP(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "GET":
 		w.Header().Set("X-rpc-Server", strings.Join(r.aliveServer(), ","))
 	case "POST":
 		addr := req.Header.Get("X-rpc-Server")
-		log.Println("rpc registry: receive heartbeat from ", addr)
 		// 提供的服务端地址url为空时
 		if addr == "" {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -90,15 +97,14 @@ func (r *Registry) ServerHTTP(w http.ResponseWriter, req *http.Request) {
 }
 func (r *Registry) HandleHTTP(registryPath string) {
 	http.Handle(registryPath, http.HandlerFunc(r.ServerHTTP))
-	log.Println("rpc registry: rpc registry handler path: ", registryPath)
+	log.Println("rpc registry path: ", registryPath)
 }
 
 func HandleHTTP() {
 	DefaultRegistry.HandleHTTP(defaultPath)
 }
 
-// Heartbeat 提供给服务端的封装，服务启动时定时向注册中心发送心跳
-// 默认发送心跳的周期比注册中心设置的过期时间少1min，确保数据能够送达。
+// Heartbeat 服务启动时定时向注册中心发送心跳，默认周期比注册中心设置的过期时间少 1 min。
 func Heartbeat(registry, addr string, duration time.Duration) {
 	if duration == 0 {
 		// 确保在超时之前有足够的时间发送心跳
@@ -116,7 +122,7 @@ func Heartbeat(registry, addr string, duration time.Duration) {
 }
 
 func sendHeartbeat(registry string, addr string) interface{} {
-	log.Printf("server %s send heartbeat to registry %s\n", addr, registry)
+	log.Println(addr, " send heartbeat to registry ", registry)
 	httpClient := &http.Client{}
 	req, _ := http.NewRequest("POST", registry, nil)
 	req.Header.Set("X-rpc-Server", addr)
